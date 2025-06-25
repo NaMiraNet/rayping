@@ -57,8 +57,9 @@ The following is a set of guidelines for contributing to the project. These guid
 
 We follow the **Conventional Commits** specification:
 
+
 ```
-<type>(scope?): <description>
+<Emoji(optional)> <type>(scope?): <description>
 
 <body>
 ```
@@ -75,12 +76,15 @@ Example:
 
 ```
 feat(api): add Telegram notification hook
+or
+📝 docs(api): add Telegram notification hook
 ```
 
 ## Running Tests
 
+#### notice : For Now We Dont Have Tests . its just PlaceHolder 
 ```bash
-make test      # unit tests
+make test      # unit tests 
 make coverage  # generate coverage report
 ```
 
