@@ -1,159 +1,273 @@
-# **Namira Core**  
-*A fast, self-hosted quality-assurance toolkit for VMess / VLESS / Trojan / Shadowsocks links*
+# Namira Core
 
----
+[![Go Version](https://img.shields.io/badge/go-1.21+-blue.svg)](https://golang.org)
+[![Docker](https://img.shields.io/badge/docker-20.10+-blue.svg)](https://www.docker.com)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE.md)
 
-<!-- TOC generated with https://github.com/ekalinin/github-markdown-toc -->
-- [Overview & Purpose](#overview--purpose)
-- [For Non-Technical Users (Plain English Walk-Through)](#for-non-technical-users-plain-english-walk-through)
-- [Installation & Build Instructions](#installation--build-instructions)
-  - [Quick Docker Run (2 minutes)](#quick-docker-run-2-minutes)
-  - [Permanent API Stack (≈ 15 minutes)](#permanent-api-stack--15-minutes)
-  - [Building from Source (optional)](#building-from-source-optional)
-  - [Common Errors & Fixes](#common-errors--fixes)
-- [Usage Guide](#usage-guide)
-  - [CLI One-Shot Scan](#cli-one-shot-scan)
-  - [REST API Workflow](#rest-api-workflow)
-  - [Advanced Options & Configuration](#advanced-options--configuration)
-- [Maintenance & Community](#maintenance--community)
-- [Repository Essentials](#repository-essentials)
-  - [License](#license)
-  - [Contributing Guidelines](#contributing-guidelines)
-  - [Code of Conduct](#code-of-conduct)
-  - [Issue & Pull-Request Templates](#issue--pull-request-templates)
-  - [Support & Contact](#support--contact)
-- [Release Cycle & Versioning](#release-cycle--versioning)
+A high-performance, self-hosted quality assurance toolkit for VPN proxy configurations. Namira Core validates, benchmarks, and ranks VMess, VLESS, Trojan, and Shadowsocks connections with real TCP handshakes and latency measurements.
 
----
+## 🚀 Features
 
-## Overview & Purpose
-**Namira Core** is a lightweight service that **verifies, benchmarks, and ranks VPN subscription links**.  
-Instead of trusting a random list of `vmess://` or `ss://` URLs, Namira Core:
+- **Multi-Protocol Support**: Validates VMess, VLESS, Shadowsocks, and Trojan VPN configurations
+- **Real Connectivity Testing**: Performs actual TCP handshakes, not just ping tests
+- **High Concurrency**: Dynamically adjusts concurrent connection limits based on system resources
+- **API Server**: RESTful API for checking VPN configurations
+- **Notification System**: Integrated Telegram notifications for valid configurations
+- **Worker Pool**: Efficient job processing with configurable worker pools
+- **Redis Integration**: Persistent storage and caching of results
+- **GitHub Integration**: Automated updates to GitHub repositories with valid configurations
 
-1. **Parses** each link to ensure it is syntactically valid.  
-2. **Establishes** a minimal real TCP handshake (far more reliable than a simple ICMP ping).  
-3. **Measures** latency in milliseconds to reveal practical performance.  
-4. **Outputs** a clean JSON file or pushes the results to GitHub / Telegram.
+## 📋 Table of Contents
 
-> **Why does this matter?**  
-> Latency and availability vary wildly between nodes. Manual testing is slow, error-prone, and often skips subtle misconfigurations. Namira Core automates the process, giving quantifiable data so you can choose the fastest, truly alive servers.
+- [Quick Start](#-quick-start)
+- [How It Works](#-how-it-works)
+- [Architecture](#-architecture)
+- [Requirements](#-requirements)
+- [Configuration](#-configuration)
+- [Installation](#-installation)
+- [API Documentation](#-api-documentation)
+- [Example Usage](#-example-usage)
+- [Contributing](#-contributing)
+- [License](#-license)
+- [Acknowledgments](#-acknowledgments)
 
----
+## ⚡ Quick Start
 
-## For Non-Technical Users (Plain English Walk-Through)
-
-> *Analogy*: Think of Namira Core as a **speed-gun and health-check booth** for VPN passes.
-
-1. **Drop your pass pile** (`links.txt`) into the booth.  
-2. The booth **inspects each pass** to see if the barcode is even readable (format check).  
-3. It then **tries the door** with each pass—no guessing—verifying which doors actually open (TCP handshake).  
-4. A radar gun **records how quickly** the door opens (latency).  
-5. Finally, it **hands you a tidy report**: green passes are fast & valid, red ones are duds.
-
-### Prerequisites in everyday terms
-| What you need | Why you need it | Real-world comparison |
-|---------------|-----------------|-----------------------|
-| **Docker** **20.10+**           | Container runtime that isolates apps | Like installing a sandbox where the tool lives |
-| **A text file** with links      | The “stack of passes” to test        | Simply a list of URLs copied from your provider |
-| *(API mode only)* **Redis**     | Temporary queue for jobs             | A fast notepad the service scribbles on |
-
----
-
-## Installation & Build Instructions
-
-### Quick Docker Run (2 minutes)
+### Using Docker Compose
 
 ```bash
-docker run --rm -v "$PWD:/data" ghcr.io/namiranet/namira-core:latest   check --config /data/links.txt
-# Results saved to ./report.json
-```
-
-> **Tip**: Pipe the JSON through `jq` for pretty colours:  
-> `cat report.json | jq '.'`
-
----
-
-### Permanent API Stack (≈ 15 minutes)
-
-```bash
+# Clone the repository
 git clone https://github.com/NaMiraNet/namira-core.git
 cd namira-core
-cp .env.example .env        # set at least API_KEY
-docker compose up --build -d
-curl http://localhost:8080/health
+
+# Create .env file with your configuration
+cp .env.example .env
+# Edit .env with your settings
+
+# Start the services
+docker-compose up -d
 ```
 
-| Container | Port | Purpose |
-|-----------|------|---------|
-| `namira-core` | 8080 | REST API & worker orchestrator |
-| `redis` | 6379 | Job queue backend |
+Access the API at `http://localhost:8080`
 
----
+## 🔄 How It Works
 
-### Building from Source (optional)
+Namira Core processes VPN configurations through a pipeline of operations to validate their connectivity and measure performance:
+
+```
+┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+│             │    │             │    │             │    │             │    │             │
+│    Input    │───►│   Parser    │───►│  Checker    │───►│  Analyzer   │───►│   Output    │
+│  VPN Links  │    │             │    │             │    │             │    │   Results   │
+│             │    │             │    │             │    │             │    │             │
+└─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
+                         │                  │                  │
+                         ▼                  ▼                  ▼
+                   ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+                   │             │    │             │    │             │
+                   │  Protocol   │    │    TCP      │    │  Latency    │
+                   │ Extraction  │    │ Handshake   │    │ Measurement │
+                   │             │    │             │    │             │
+                   └─────────────┘    └─────────────┘    └─────────────┘
+```
+
+### Workflow
+
+1. **Input Processing**: 
+   - VPN configuration links are submitted via API or CLI
+   - Links are queued for processing in the worker pool
+
+2. **Parsing**:
+   - Each link is parsed to extract protocol-specific parameters
+   - Supported protocols: VMess, VLESS, Shadowsocks, Trojan
+
+3. **Checking**:
+   - Real TCP handshakes are performed to verify connectivity
+   - Connection timeouts and errors are handled gracefully
+   - Latency is measured with multiple samples for accuracy
+
+4. **Analysis**:
+   - Results are analyzed to determine availability status
+   - Configurations are ranked by performance
+   - Metadata is enriched (location, provider, etc.)
+
+5. **Output**:
+   - Results are returned via API or saved to files
+   - Valid configurations can be automatically:
+     - Sent to Telegram channels
+     - Committed to GitHub repositories
+     - Stored in Redis for caching
+
+The worker pool manages concurrency, ensuring optimal resource utilization while preventing system overload.
+
+## 🏗 Architecture
+
+The application is structured with clean separation of concerns:
+
+- **Core**: Central components for parsing and checking VPN configurations
+- **API**: RESTful endpoints for submitting configuration check requests
+- **Worker**: Background job processing for handling configuration checks
+- **Notify**: Notification system for sending results via Telegram
+- **Config**: Configuration management from environment variables
+- **Logger**: Structured logging using zap
+
+## 📋 Requirements
+
+- **Go 1.21+**
+- **Redis 7.2+**
+- **GitHub SSH key** (for GitHub integration)
+- **Docker and Docker Compose** (for containerized deployment)
+
+## ⚙️ Configuration
+
+The application is configured via environment variables:
+
+### Core Application Settings
+| Variable | Default | Description |
+|----------|---------|-------------|
+| SERVER_PORT | 8080 | Port for the HTTP server |
+| SERVER_HOST | 0.0.0.0 | Host for the HTTP server |
+| APP_TIMEOUT | 10s | Connection timeout per proxy test |
+| MAX_CONCURRENT | 50 | Maximum concurrent connections |
+| LOG_LEVEL | info | Logging level (debug, info, warn, error) |
+| ENCRYPTION_KEY | - | Key for encrypting sensitive data |
+
+### Redis Configuration
+| Variable | Default | Description |
+|----------|---------|-------------|
+| REDIS_ADDR | redis:6379 | Redis server address |
+| REDIS_PASSWORD | - | Redis password |
+| REDIS_DB | 0 | Redis database number |
+
+### GitHub Integration
+| Variable | Default | Description |
+|----------|---------|-------------|
+| GITHUB_SSH_KEY_PATH | /app/keys/github_deploy_key | Path to GitHub SSH key |
+| GITHUB_OWNER | - | GitHub repository owner |
+| GITHUB_REPO | - | GitHub repository name |
+
+## 📦 Installation
+
+### Using Docker Compose (Recommended)
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/NaMiraNet/namira-core.git
+   cd namira-core
+   ```
+
+2. Create a `.env` file with your configuration:
+   ```
+   GITHUB_OWNER=your-github-username
+   GITHUB_REPO=your-repo-name
+   ENCRYPTION_KEY=your-encryption-key
+   SSH_KEY_PATH=./path/to/your/ssh/key
+   ```
+
+3. Start the services:
+   ```bash
+   docker-compose up -d
+   ```
+
+### Manual Installation
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/NaMiraNet/namira-core.git
+   cd namira-core
+   ```
+
+2. Install dependencies:
+   ```bash
+   go mod download
+   ```
+
+3. Build the application:
+   ```bash
+   make build
+   ```
+
+4. Run the application:
+   ```bash
+   ./bin/namira-core api
+   ```
+
+## 📚 API Documentation
+
+### Health Check
+```http
+GET /api/health
+```
+Returns service health status.
+
+### Check VPN Configurations Synchronously
+```http
+POST /api/check
+Content-Type: application/json
+
+{
+  "configs": ["vmess://...", "vless://..."]
+}
+```
+
+### Start Asynchronous Job
+```http
+POST /api/scan
+Content-Type: application/json
+
+{
+  "configs": ["vmess://...", "vless://..."]
+}
+```
+
+### Get Job Status
+```http
+GET /api/jobs/{job_id}
+```
+
+## 🔍 Example Usage
+
+### Check VPN Configurations Synchronously
 
 ```bash
-# Requires: Go 1.22+, make, git, (optional) upx
-git clone https://github.com/NaMiraNet/namira-core.git
-cd namira-core
-make test        # run unit tests
-make build       # static binary in ./bin/namira-core
+curl -X POST http://localhost:8080/api/check \
+  -H "Content-Type: application/json" \
+  -d '{"configs": ["vmess://..."]}'
 ```
 
-*Binary size*: ~8 MB after UPX compression—runs on any distro with glibc.
-
----
-
-### Common Errors & Fixes
-
-| Symptom | Likely Cause | Remedy |
-|---------|--------------|--------|
-| Container exits instantly | Mis-set environment variable | `docker logs namira-core` then review `.env` |
-| Every link `timeout` | Outbound firewall blocks TCP-80/443 | Open those ports or move behind less restrictive network |
-| `401 Unauthorized` from API | Missing `X-API-Key` header | Add correct header value |
-| High latency numbers | `CHECK_HOST` too far away | Pick geolocated IP, e.g. `8.8.8.8:53` |
-
----
-
-## Usage Guide
-
-### CLI One-Shot Scan
+### Start Asynchronous Check Job
 
 ```bash
-./bin/namira-core check --config links.txt --timeout 10s --concurrency 50
+curl -X POST http://localhost:8080/api/scan \
+  -H "Content-Type: application/json" \
+  -d '{"configs": ["vmess://...", "vless://..."]}'
 ```
 
-### REST API Workflow
+### Check Job Status
 
 ```bash
-# Submit job
-curl -X POST http://localhost:8080/scan      -H "X-API-Key: $API_KEY"      -H "Content-Type: application/json"      -d '{"configs": ["trojan://...", "vmess://..."]}'
-
-# Poll status
-curl http://localhost:8080/job/<job_id>
-
-# Fetch final JSON
-curl http://localhost:8080/job/<job_id>/result > result.json
+curl -X GET http://localhost:8080/api/jobs/{job_id}
 ```
 
-### Advanced Options & Configuration
+## 🛠️ Troubleshooting
 
-| Variable / Flag | Default | Description |
-|-----------------|---------|-------------|
-| `--timeout, APP_TIMEOUT` | `10s` | Per-link dial timeout |
-| `--concurrency, MAX_CONCURRENT` | `50` | Parallel workers |
-| `CHECK_HOST` | `1.1.1.1:80` | Destination for latency probe |
-| `TELEGRAM_BOT_TOKEN` & `TELEGRAM_CHANNEL` | *empty* | Enable Telegram notifications |
-| `ENCRYPTION_KEY` | *nil* | AES-256 key used when pushing results to GitHub |
+### Common Issues
 
----
+| Issue | Cause | Solution |
+|-------|-------|----------|
+| All connections timeout | Firewall blocking outbound connections | Open required ports or test from different network |
+| Redis connection failed | Redis not running or wrong connection string | Verify Redis is running and configuration is correct |
+| SSH connectivity test failed | Invalid SSH key or permissions | Check SSH key path and permissions |
 
-## Maintenance & Community
+### Debug Mode
 
-* **Bug reports** – Open a GitHub Issue and attach the offending link (redact sensitive parts).  
-* **Feature requests** – Label the Issue as *enhancement*; discussion is welcome.  
-* **Code contributions** – Fork, create a feature branch, run `make test`, open a PR.  
-* **Review cadence** – Maintainers triage weekly; merges follow semantic version tags.  
+Enable debug logging:
+
+```bash
+export LOG_LEVEL=debug
+./bin/namira-core api
+```
+
 
 ---
 
@@ -180,4 +294,7 @@ Structured templates live in `.github/ISSUE_TEMPLATE/` and `.github/PULL_REQUEST
 
 ---
 
-*Built with a healthy dose of skepticism—every link must prove its worth.*
+## 🙏 Acknowledgments
+
+- Go community for excellent libraries and tools
+- V2Ray project for providing the foundation for VPN protocol implementation 
