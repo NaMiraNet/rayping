@@ -59,7 +59,7 @@ We follow the **Conventional Commits** specification:
 
 
 ```
-<Emoji(optional)> <type>(scope?): <description>
+<type>(scope?): <description>
 
 <body>
 ```
@@ -76,8 +76,6 @@ Example:
 
 ```
 feat(api): add Telegram notification hook
-or
-📝 docs(api): add Telegram notification hook
 ```
 
 ## Running Tests
