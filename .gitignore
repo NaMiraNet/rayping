@@ -27,3 +27,8 @@ go.work.sum
 # Editor/IDE
 # .idea/
 # .vscode/
+
+repomix.config.json
+repomix-output.md
+repomix-output.xml
+.repomixignore
