@@ -17,7 +17,8 @@ services:
       REDIS_ADDR: redis:6379
       REDIS_PASSWORD: ${REDIS_PASSWORD:-}
       REDIS_DB: ${REDIS_DB:-0}
-      GITHUB_SSH_KEY_PATH: /app/keys/github_deploy_key
+      GEOLOCATION_DB_PATH: /app/GeoLite2-Country.mmdb
+      GITHUB_SSH_KEY_PATH: /home/namira/.ssh/id_rsa
       GITHUB_OWNER: ${GITHUB_OWNER}
       GITHUB_REPO: ${GITHUB_REPO}
       LOG_LEVEL: ${LOG_LEVEL:-info}
@@ -25,22 +26,24 @@ services:
       MAX_CONCURRENT: ${MAX_CONCURRENT:-50}
       ENCRYPTION_KEY: ${ENCRYPTION_KEY}
       SSH_KNOWN_HOSTS: /home/namira/.ssh/known_hosts
+    user: namira
     volumes:
-      - ${SSH_KEY_PATH:-./keys/github_deploy_key}:/app/keys/github_deploy_key:ro
+      - ${GEOLOCATION_DB_PATH:-./GeoLite2-Country.mmdb}:/app/GeoLite2-Country.mmdb:ro
+      - ${GITHUB_SSH_KEY_PATH:-~/.ssh/id_rsa}:/home/namira/.ssh/id_rsa:ro
     depends_on:
       redis:
         condition: service_healthy
     networks:
       - namira-network
     healthcheck:
-      test: ["CMD", "./namira-core", "version"]
+      test: ["CMD", "./namira-core", "--version"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 10s
 
   redis:
-    image: redis:7.2-alpine
+    image: redis:8-alpine
     container_name: namira-redis
     restart: unless-stopped
     command: redis-server ${REDIS_PASSWORD:+--requirepass ${REDIS_PASSWORD}} --appendonly yes
