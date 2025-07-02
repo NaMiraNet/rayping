@@ -20,7 +20,7 @@ import (
 	"github.com/NamiraNet/namira-core/internal/logger"
 	"github.com/NamiraNet/namira-core/internal/notify"
 	workerpool "github.com/NamiraNet/namira-core/internal/worker"
-	"github.com/go-redis/redis/v8"
+	"github.com/redis/go-redis/v9"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 	"golang.org/x/time/rate"

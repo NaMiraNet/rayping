@@ -13,8 +13,8 @@ import (
 	"github.com/NamiraNet/namira-core/internal/core"
 	"github.com/NamiraNet/namira-core/internal/github"
 	workerpool "github.com/NamiraNet/namira-core/internal/worker"
-	"github.com/go-redis/redis/v8"
 	"github.com/gorilla/mux"
+	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 )
 
@@ -269,7 +269,6 @@ func (h *Handler) flushRedisCache() error {
 	ctx := context.Background()
 	iter := h.redis.Scan(ctx, 0, pattern, 0).Iterator()
 	pipe := h.redis.Pipeline()
-	defer pipe.Close()
 
 	batch := make([]string, 0, batchSize)
 	for iter.Next(ctx) {

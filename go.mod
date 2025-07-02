@@ -5,10 +5,10 @@ go 1.24
 require (
 	github.com/enescakir/emoji v1.0.0
 	github.com/go-git/go-git/v5 v5.16.2
-	github.com/go-redis/redis/v8 v8.11.5
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/mux v1.8.1
 	github.com/joho/godotenv v1.5.1
+	github.com/redis/go-redis/v9 v9.11.0
 	github.com/swaggo/swag v1.16.4
 	github.com/xtls/xray-core v1.250608.0
 	go.uber.org/zap v1.27.0

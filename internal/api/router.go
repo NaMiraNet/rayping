@@ -9,8 +9,8 @@ import (
 	"github.com/NamiraNet/namira-core/internal/github"
 	"github.com/NamiraNet/namira-core/internal/logger"
 	workerpool "github.com/NamiraNet/namira-core/internal/worker"
-	"github.com/go-redis/redis/v8"
 	"github.com/gorilla/mux"
+	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 )
 

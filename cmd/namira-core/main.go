@@ -9,7 +9,7 @@ import (
 	"github.com/NamiraNet/namira-core/internal/config"
 	"github.com/NamiraNet/namira-core/internal/core"
 	"github.com/NamiraNet/namira-core/internal/github"
-	"github.com/go-redis/redis/v8"
+	"github.com/redis/go-redis/v9"
 	"github.com/spf13/cobra"
 )
 
