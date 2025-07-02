@@ -2,15 +2,11 @@ FROM alpine:3.20
 
 RUN apk update && \
     apk add --no-cache git openssh-client ca-certificates tzdata && \
-    adduser -D -u 1001 namira && \
-    mkdir -p /app/keys && \
-    chown namira:namira /app/keys && \
-    chmod 700 /app/keys
-
-RUN mkdir -p /home/namira/.ssh && \
+    adduser -D -u 1000 namira && \
+    mkdir -p /app/logs /home/namira/.ssh && \
     ssh-keyscan -H github.com >> /home/namira/.ssh/known_hosts && \
-    chown -R namira:namira /home/namira/.ssh && \
-    chmod 700 /home/namira/.ssh && \
+    chown -R namira:namira /app/logs /home/namira/.ssh && \
+    chmod 700 /app/logs /home/namira/.ssh && \
     chmod 600 /home/namira/.ssh/known_hosts
 
 WORKDIR /app
