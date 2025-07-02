@@ -129,7 +129,7 @@ The application is structured with clean separation of concerns:
 ## 📋 Requirements
 
 - **Go 1.24+**
-- **Redis 7.2+**
+- **Redis 8.0+**
 - **GitHub SSH key** (for GitHub integration)
 - **Docker and Docker Compose** (for containerized deployment)
 
