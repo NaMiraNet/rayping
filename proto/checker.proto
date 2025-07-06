@@ -1,0 +1,68 @@
+syntax = "proto3";
+
+package checker.v1;
+
+option go_package = "github.com/NamiraNet/namira-core/proto";
+
+import "google/protobuf/timestamp.proto";
+
+service ConfigChecker {
+  // Bidirectional streaming for real-time config checking
+  rpc CheckConfigs(stream CheckRequest) returns (stream CheckResponse);
+  
+  // Health check
+  rpc Health(HealthRequest) returns (HealthResponse);
+  
+  // Get service stats
+  rpc GetStats(StatsRequest) returns (StatsResponse);
+}
+
+message CheckRequest {
+  string job_id = 1;
+  string config = 2;
+  int32 timeout_seconds = 3;
+  map<string, string> metadata = 4;
+}
+
+message CheckResponse {
+  string job_id = 1;
+  string config = 2;
+  CheckStatus status = 3;
+  bool is_valid = 4;
+  int64 latency_ms = 5;
+  string error_message = 6;
+  string protocol = 7;
+  string server = 8;
+  string country_code = 9;
+  string remark = 10;
+  google.protobuf.Timestamp timestamp = 11;
+}
+
+enum CheckStatus {
+  UNKNOWN = 0;
+  PENDING = 1;
+  CHECKING = 2;
+  SUCCESS = 3;
+  FAILED = 4;
+  TIMEOUT = 5;
+}
+
+message HealthRequest {}
+
+message HealthResponse {
+  bool healthy = 1;
+  string version = 2;
+  int32 active_workers = 3;
+  int32 queue_size = 4;
+  map<string, string> details = 5;
+}
+
+message StatsRequest {}
+
+message StatsResponse {
+  int64 total_checks = 1;
+  int64 successful_checks = 2;
+  int64 failed_checks = 3;
+  double success_rate = 4;
+  int64 uptime_seconds = 5;
+}
