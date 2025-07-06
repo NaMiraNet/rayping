@@ -16,6 +16,7 @@ type Config struct {
 	App      AppConfig
 	Github   GithubConfig
 	Telegram TelegramConfig
+	GRPC     GRPCConfig
 }
 
 type ServerConfig struct {
@@ -62,6 +63,12 @@ type TelegramConfig struct {
 	SendingInterval time.Duration
 }
 
+type GRPCConfig struct {
+	CheckerServiceAddr string
+	Timeout            time.Duration
+	MaxConcurrent      int
+}
+
 // Load loads configuration from environment variables with defaults value
 func Load() *Config {
 	return &Config{
@@ -102,6 +109,11 @@ func Load() *Config {
 			QRConfig:        getEnv("TELEGRAM_QR_CONFIG", ""),
 			ProxyURL:        getEnv("TELEGRAM_PROXY_URL", ""),
 			SendingInterval: getEnvDuration("TELEGRAM_SENDING_INTERVAL", 10*time.Second),
+		},
+		GRPC: GRPCConfig{
+			CheckerServiceAddr: getEnv("GRPC_CHECKER_SERVICE_ADDR", "localhost:50051"),
+			Timeout:            getEnvDuration("GRPC_TIMEOUT", 5*time.Minute),
+			MaxConcurrent:      getEnvInt("GRPC_MAX_CONCURRENT", 0),
 		},
 	}
 }
