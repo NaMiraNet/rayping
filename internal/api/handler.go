@@ -12,6 +12,7 @@ import (
 
 	"github.com/NamiraNet/namira-core/internal/core"
 	"github.com/NamiraNet/namira-core/internal/github"
+	"github.com/NamiraNet/namira-core/internal/grpc"
 	workerpool "github.com/NamiraNet/namira-core/internal/worker"
 	"github.com/gorilla/mux"
 	"github.com/redis/go-redis/v9"
@@ -31,6 +32,7 @@ type ConfigSuccessHandler func(core.CheckResult)
 
 type Handler struct {
 	core                  *core.Core
+	grpcCore              *grpc.GRPCCore
 	workerPool            *workerpool.WorkerPool
 	redis                 *redis.Client
 	jobs                  sync.Map
@@ -47,9 +49,10 @@ type Handler struct {
 	refreshDone     chan struct{}
 }
 
-func NewHandler(c *core.Core, redisClient *redis.Client, callbackHandler CallbackHandler, configSuccessHandler ConfigSuccessHandler, logger *zap.Logger, updater *github.Updater, worker *workerpool.WorkerPool, versionInfo VersionInfo, redisResultExpiration time.Duration, refreshInterval time.Duration) *Handler {
+func NewHandler(c *core.Core, grpcCore *grpc.GRPCCore, redisClient *redis.Client, callbackHandler CallbackHandler, configSuccessHandler ConfigSuccessHandler, logger *zap.Logger, updater *github.Updater, worker *workerpool.WorkerPool, versionInfo VersionInfo, redisResultExpiration time.Duration, refreshInterval time.Duration) *Handler {
 	handler := &Handler{
 		core:                  c,
+		grpcCore:              grpcCore,
 		workerPool:            worker,
 		redis:                 redisClient,
 		logger:                logger,
@@ -260,6 +263,32 @@ func (h *Handler) handleHealth(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func (h *Handler) handleGRPCHealth(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
+	defer cancel()
+
+	if err := h.grpcCore.HealthCheck(ctx); err != nil {
+		h.logger.Error("gRPC health check failed", zap.Error(err))
+		writeError(w, "gRPC service unavailable", http.StatusServiceUnavailable)
+		return
+	}
+
+	stats, err := h.grpcCore.GetStats(ctx)
+	if err != nil {
+		h.logger.Error("Failed to get gRPC stats", zap.Error(err))
+		writeJSON(w, map[string]interface{}{
+			"grpc_status": "healthy",
+			"stats_error": err.Error(),
+		})
+		return
+	}
+
+	writeJSON(w, map[string]interface{}{
+		"grpc_status": "healthy",
+		"stats":       stats,
+	})
+}
+
 func (h *Handler) flushRedisCache() error {
 	const (
 		pattern   = "config:*"
@@ -314,7 +343,7 @@ func (h *Handler) executeCheckTask(ctx context.Context, data interface{}) (inter
 	results := make([]core.CheckResult, 0, len(taskData.Configs))
 
 	i := 0
-	for result := range h.core.CheckConfigs(taskData.Configs) {
+	for result := range h.grpcCore.CheckConfigs(taskData.Configs) {
 		results = append(results, result)
 		checkResult := CheckResult{
 			Index:  i,
@@ -330,6 +359,8 @@ func (h *Handler) executeCheckTask(ctx context.Context, data interface{}) (inter
 				zap.String("protocol", result.Protocol))
 			job.Done()
 		} else {
+			h.core.FillCheckResult(&result)
+
 			h.logger.Info("Config check succeeded",
 				zap.String("server", result.Server),
 				zap.String("protocol", result.Protocol),
@@ -422,6 +453,12 @@ func (h *Handler) filterDuplicates(configs []string) ([]string, error) {
 
 func (h *Handler) Close() {
 	h.workerPool.Stop()
+	if h.grpcCore != nil {
+		if err := h.grpcCore.Close(); err != nil {
+			h.logger.Error("Failed to close gRPC core", zap.Error(err))
+		}
+	}
+	close(h.refreshDone)
 }
 
 // Helper functions

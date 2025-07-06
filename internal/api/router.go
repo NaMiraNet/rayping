@@ -7,6 +7,7 @@ import (
 
 	"github.com/NamiraNet/namira-core/internal/core"
 	"github.com/NamiraNet/namira-core/internal/github"
+	"github.com/NamiraNet/namira-core/internal/grpc"
 	"github.com/NamiraNet/namira-core/internal/logger"
 	workerpool "github.com/NamiraNet/namira-core/internal/worker"
 	"github.com/gorilla/mux"
@@ -14,15 +15,16 @@ import (
 	"go.uber.org/zap"
 )
 
-func NewRouter(c *core.Core, redisClient *redis.Client, callbackHandler CallbackHandler, configSuccessHandler ConfigSuccessHandler, logger *zap.Logger, updater *github.Updater, worker *workerpool.WorkerPool, versionInfo VersionInfo, redisResultExpiration time.Duration, refreshInterval time.Duration) *mux.Router {
+func NewRouter(c *core.Core, grpcCore *grpc.GRPCCore, redisClient *redis.Client, callbackHandler CallbackHandler, configSuccessHandler ConfigSuccessHandler, logger *zap.Logger, updater *github.Updater, worker *workerpool.WorkerPool, versionInfo VersionInfo, redisResultExpiration time.Duration, refreshInterval time.Duration) *mux.Router {
 	r := mux.NewRouter()
-	h := NewHandler(c, redisClient, callbackHandler, configSuccessHandler, logger, updater, worker, versionInfo, redisResultExpiration, refreshInterval)
+	h := NewHandler(c, grpcCore, redisClient, callbackHandler, configSuccessHandler, logger, updater, worker, versionInfo, redisResultExpiration, refreshInterval)
 
 	r.Use(corsMiddleware, authMiddleware, loggingMiddleware)
 
 	r.HandleFunc("/scan", h.handleScan).Methods(http.MethodPost)
 	r.HandleFunc("/job/{id}", h.handleJobStatus).Methods(http.MethodGet)
 	r.HandleFunc("/health", h.handleHealth).Methods(http.MethodGet)
+	r.HandleFunc("/health/grpc", h.handleGRPCHealth).Methods(http.MethodGet)
 
 	return r
 }
