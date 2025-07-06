@@ -17,6 +17,7 @@ import (
 	"github.com/NamiraNet/namira-core/internal/api"
 	"github.com/NamiraNet/namira-core/internal/core"
 	"github.com/NamiraNet/namira-core/internal/github"
+	"github.com/NamiraNet/namira-core/internal/grpc"
 	"github.com/NamiraNet/namira-core/internal/logger"
 	"github.com/NamiraNet/namira-core/internal/notify"
 	workerpool "github.com/NamiraNet/namira-core/internal/worker"
@@ -98,6 +99,16 @@ func runAPIServer(cmd *cobra.Command, args []string) {
 			ShowProtocol: true,
 		},
 	})
+
+	grpcCoreInstance, err := grpc.NewGRPCCore(grpc.GRPCCoreOpts{
+		CheckerServiceAddr: cfg.GRPC.CheckerServiceAddr,
+		Timeout:            cfg.GRPC.Timeout,
+		MaxConcurrent:      cfg.GRPC.MaxConcurrent,
+		Logger:             logger,
+	})
+	if err != nil {
+		logger.Fatal("Failed to create gRPC core:", zap.Error(err))
+	}
 
 	callbackHandler := func(result api.CallbackHandlerResult) {
 		if result.Error != nil {
@@ -190,6 +201,7 @@ func runAPIServer(cmd *cobra.Command, args []string) {
 
 	router := api.NewRouter(
 		coreInstance,
+		grpcCoreInstance,
 		redisClient,
 		callbackHandler,
 		telegramConfigResultHandler,
