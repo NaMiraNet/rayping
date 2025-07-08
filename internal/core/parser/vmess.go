@@ -198,6 +198,10 @@ func parseVMess(link string) (Config, error) {
 		return nil, fmt.Errorf("invalid VMess link format: %v", err)
 	}
 
+	if err := validateAddress(linkConfig.Add); err != nil {
+		return nil, fmt.Errorf("invalid VMess link format: %v", err)
+	}
+
 	config := &vmessConfig{
 		Raw:      link,
 		Server:   linkConfig.Add,

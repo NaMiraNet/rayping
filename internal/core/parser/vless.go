@@ -214,6 +214,10 @@ func parseVless(link string) (Config, error) {
 		return nil, fmt.Errorf("invalid VLESS link format: %v", err)
 	}
 
+	if err := validateAddress(host); err != nil {
+		return nil, fmt.Errorf("invalid VLESS link format: %v", err)
+	}
+
 	config.Server = host
 	config.Port, err = strconv.Atoi(portStr)
 	if err != nil {

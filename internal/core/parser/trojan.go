@@ -208,11 +208,14 @@ func parseTrojan(link string) (Config, error) {
 	}
 
 	config.Server = host
+	if err := validateAddress(config.Server); err != nil {
+		return nil, fmt.Errorf("invalid VMess link format: %v", err)
+	}
+
 	config.Port, err = strconv.Atoi(portStr)
 	if err != nil {
 		return nil, fmt.Errorf("invalid port: %v", err)
 	}
-
 	params := parsedURL.Query()
 
 	config.SNI = params.Get("sni")
