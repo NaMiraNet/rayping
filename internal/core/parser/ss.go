@@ -102,6 +102,10 @@ func parseSS(link string) (Config, error) {
 	}
 
 	config.Server = host
+	if err := validateAddress(config.Server); err != nil {
+		return nil, fmt.Errorf("invalid ShadowSocks link format: %v", err)
+	}
+
 	config.Port, err = strconv.Atoi(portStr)
 	if err != nil {
 		return nil, fmt.Errorf("invalid ShadowSocks link format: invalid port")

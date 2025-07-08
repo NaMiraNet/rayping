@@ -10,9 +10,10 @@ type Config interface {
 }
 
 var (
-	ErrInvalidConfig   = fmt.Errorf("invalid config")
-	ErrUnsupportedType = fmt.Errorf("unsupported config type")
-	ErrInvalidFormat   = fmt.Errorf("invalid config format")
+	ErrInvalidConfig    = fmt.Errorf("invalid config")
+	ErrUnsupportedType  = fmt.Errorf("unsupported config type")
+	ErrInvalidFormat    = fmt.Errorf("invalid config format")
+	ErrLocalhostBlocked = fmt.Errorf("localhost addresses are not allowed")
 )
 
 type basicOutboundConfig struct {
