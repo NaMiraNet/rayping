@@ -100,10 +100,12 @@ func runAPIServer(cmd *cobra.Command, args []string) {
 		},
 	})
 
-	grpcCoreInstance, err := grpc.NewGRPCCore(grpc.GRPCCoreOpts{
-		CheckerServiceAddr: cfg.GRPC.CheckerServiceAddr,
+	grpcCoreInstance, err := grpc.NewGRPCCore(&grpc.GRPCCoreOpts{
+		CheckerServiceAddr: cfg.GRPC.CheckerServiceAddr, // Fallback for backward compatibility
+		CheckerNodes:       cfg.GRPC.CheckerNodes,
 		Timeout:            cfg.GRPC.Timeout,
 		MaxConcurrent:      cfg.GRPC.MaxConcurrent,
+		AggregateMode:      cfg.GRPC.AggregateMode,
 		Logger:             logger,
 	})
 	if err != nil {

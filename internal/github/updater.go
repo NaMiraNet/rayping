@@ -56,13 +56,14 @@ type JSONResult struct {
 }
 
 type JSONConfigResult struct {
-	Delay       int64  `json:"delay_ms"`
-	Status      string `json:"status"`
-	Protocol    string `json:"protocol"`
-	RawConfig   string `json:"raw_config"`
-	CountryCode string `json:"country_code"`
-	Remark      string `json:"remark"`
-	Server      string `json:"server"`
+	Delay          int64    `json:"delay_ms"`
+	Status         string   `json:"status"`
+	Protocol       string   `json:"protocol"`
+	RawConfig      string   `json:"raw_config"`
+	CountryCode    string   `json:"country_code"`
+	Remark         string   `json:"remark"`
+	Server         string   `json:"server"`
+	CheckerNodeTag []string `json:"tag,omitempty"` // Array of worker tags that successfully processed this result
 }
 
 func NewUpdater(log *zap.Logger, sshKeyPath string, redisClient *redis.Client, repoOwner, repoName string, encryptionKey []byte) (*Updater, error) {
@@ -370,13 +371,14 @@ func formatResultsJSON(scanResult ScanResult) JSONResult {
 	for _, result := range scanResult.Results {
 		if result.Status == core.CheckResultStatusSuccess {
 			results = append(results, JSONConfigResult{
-				Status:      string(result.Status),
-				Delay:       result.RealDelay.Milliseconds(),
-				Protocol:    result.Protocol,
-				RawConfig:   result.Raw,
-				CountryCode: result.CountryCode,
-				Remark:      result.Remark,
-				Server:      result.Server,
+				Status:         string(result.Status),
+				Delay:          result.RealDelay.Milliseconds(),
+				Protocol:       result.Protocol,
+				RawConfig:      result.Raw,
+				CountryCode:    result.CountryCode,
+				Remark:         result.Remark,
+				Server:         result.Server,
+				CheckerNodeTag: result.CheckerNodeTag,
 			})
 		}
 	}
