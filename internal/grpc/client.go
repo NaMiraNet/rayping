@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"io"
 	"sync"
@@ -10,8 +11,10 @@ import (
 	checkerpb "github.com/NamiraNet/namira-core/proto"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/keepalive"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
 
@@ -24,11 +27,13 @@ const (
 )
 
 type CheckerClient struct {
-	conn       *grpc.ClientConn
-	client     checkerpb.ConfigCheckerClient
-	logger     *zap.Logger
-	serverAddr string
-	timeout    time.Duration
+	conn        *grpc.ClientConn
+	client      checkerpb.ConfigCheckerClient
+	logger      *zap.Logger
+	serverAddr  string
+	apiKey      string
+	timeout     time.Duration
+	credentials credentials.TransportCredentials
 
 	// Connection management
 	mu           sync.RWMutex
@@ -59,12 +64,31 @@ type CheckerStats struct {
 	UptimeSeconds    int64
 }
 
-func NewCheckerClient(serverAddr string, logger *zap.Logger) (*CheckerClient, error) {
+type CheckerClientOpts struct {
+	APIKey    string
+	TLSConfig *tls.Config
+	Timeout   time.Duration
+}
+
+func NewCheckerClient(serverAddr string, logger *zap.Logger, options ...*CheckerClientOpts) (*CheckerClient, error) {
 	client := &CheckerClient{
-		serverAddr: serverAddr,
-		logger:     logger,
-		timeout:    defaultTimeout,
+		serverAddr:  serverAddr,
+		logger:      logger,
+		timeout:     defaultTimeout,
+		credentials: insecure.NewCredentials(),
 	}
+
+	if len(options) > 0 {
+		opts := options[0]
+		if opts.TLSConfig != nil {
+			client.credentials = credentials.NewTLS(opts.TLSConfig)
+		}
+		if opts.Timeout > 0 {
+			client.timeout = opts.Timeout
+		}
+		client.apiKey = opts.APIKey
+	}
+
 	return client, client.connect()
 }
 
@@ -90,7 +114,7 @@ func (c *CheckerClient) connect() error {
 
 func (c *CheckerClient) createConnection() (*grpc.ClientConn, error) {
 	return grpc.NewClient(c.serverAddr,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithTransportCredentials(c.credentials),
 		grpc.WithKeepaliveParams(keepalive.ClientParameters{
 			Time:                keepAliveTime,
 			Timeout:             keepAliveTimeout,
@@ -103,12 +127,19 @@ func (c *CheckerClient) createConnection() (*grpc.ClientConn, error) {
 	)
 }
 
+func (c *CheckerClient) withAuthContext(ctx context.Context) context.Context {
+	if c.apiKey == "" {
+		return ctx
+	}
+	return metadata.AppendToOutgoingContext(ctx, "authorization", c.apiKey)
+}
+
 func (c *CheckerClient) CheckConfigs(ctx context.Context, jobID string, configs []string) (<-chan *CheckerResponse, error) {
 	if err := c.ensureConnected(); err != nil {
 		return nil, err
 	}
 
-	stream, err := c.client.CheckConfigs(ctx)
+	stream, err := c.client.CheckConfigs(c.withAuthContext(ctx))
 	if err != nil {
 		c.logger.Error("Failed to create check stream", zap.Error(err))
 		return nil, err
@@ -212,10 +243,11 @@ func (c *CheckerClient) logStreamError(jobID string, err error) {
 
 func (c *CheckerClient) HealthCheck(ctx context.Context) error {
 	if err := c.ensureConnected(); err != nil {
+		c.logger.Info("Not connected to checker service, skipping health check", zap.Error(err))
 		return err
 	}
 
-	_, err := c.client.Health(ctx, &checkerpb.HealthRequest{})
+	_, err := c.client.Health(c.withAuthContext(ctx), &checkerpb.HealthRequest{})
 	return err
 }
 
@@ -224,7 +256,7 @@ func (c *CheckerClient) GetStats(ctx context.Context) (*CheckerStats, error) {
 		return nil, err
 	}
 
-	resp, err := c.client.GetStats(ctx, &checkerpb.StatsRequest{})
+	resp, err := c.client.GetStats(c.withAuthContext(ctx), &checkerpb.StatsRequest{})
 	if err != nil {
 		return nil, err
 	}
