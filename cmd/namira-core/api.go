@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"net"
 	"strconv"
@@ -100,12 +102,42 @@ func runAPIServer(cmd *cobra.Command, args []string) {
 		},
 	})
 
+	var grpcTLSConfig *tls.Config
+	if cfg.GRPC.TLS.CertFile != "" && cfg.GRPC.TLS.KeyFile != "" {
+		cert, err := tls.LoadX509KeyPair(cfg.GRPC.TLS.CertFile, cfg.GRPC.TLS.KeyFile)
+		if err != nil {
+			logger.Fatal("Failed to load TLS certificate", zap.Error(err))
+		}
+		if cfg.GRPC.TLS.CAFile != "" {
+			caCert, err := os.ReadFile(cfg.GRPC.TLS.CAFile)
+			if err != nil {
+				logger.Fatal("Failed to read CA certificate", zap.Error(err))
+			}
+			caCertPool := x509.NewCertPool()
+			caCertPool.AppendCertsFromPEM(caCert)
+			grpcTLSConfig = &tls.Config{
+				Certificates: []tls.Certificate{cert},
+				RootCAs:      caCertPool,
+			}
+		} else {
+			grpcTLSConfig = &tls.Config{
+				Certificates: []tls.Certificate{cert},
+			}
+		}
+		logger.Info("gRPC TLS configuration loaded",
+			zap.String("cert_file", cfg.GRPC.TLS.CertFile),
+			zap.String("key_file", cfg.GRPC.TLS.KeyFile),
+			zap.String("ca_file", cfg.GRPC.TLS.CAFile))
+	}
+
 	grpcCoreInstance, err := grpc.NewGRPCCore(&grpc.GRPCCoreOpts{
 		CheckerServiceAddr: cfg.GRPC.CheckerServiceAddr, // Fallback for backward compatibility
 		CheckerNodes:       cfg.GRPC.CheckerNodes,
 		Timeout:            cfg.GRPC.Timeout,
 		MaxConcurrent:      cfg.GRPC.MaxConcurrent,
 		AggregateMode:      cfg.GRPC.AggregateMode,
+		APIKey:             cfg.GRPC.APIKey,
+		TLSConfig:          grpcTLSConfig,
 		Logger:             logger,
 	})
 	if err != nil {
