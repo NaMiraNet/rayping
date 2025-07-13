@@ -3,9 +3,14 @@ package config
 import (
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	_ "github.com/joho/godotenv/autoload"
+)
+
+const (
+	defaultCheckerAddr = "localhost:50051"
 )
 
 // Config holds the base configuration
@@ -64,9 +69,16 @@ type TelegramConfig struct {
 }
 
 type GRPCConfig struct {
-	CheckerServiceAddr string
+	CheckerServiceAddr string // Deprecated: use CheckerNodes instead
+	CheckerNodes       []CheckerNodeConfig
 	Timeout            time.Duration
 	MaxConcurrent      int
+	AggregateMode      bool // If true, send each config to all workers for redundancy; if false, distribute efficiently
+}
+
+type CheckerNodeConfig struct {
+	Addr string
+	Tag  string
 }
 
 // Load loads configuration from environment variables with defaults value
@@ -111,9 +123,11 @@ func Load() *Config {
 			SendingInterval: getEnvDuration("TELEGRAM_SENDING_INTERVAL", 10*time.Second),
 		},
 		GRPC: GRPCConfig{
-			CheckerServiceAddr: getEnv("GRPC_CHECKER_SERVICE_ADDR", "localhost:50051"),
+			CheckerServiceAddr: getEnv("GRPC_CHECKER_SERVICE_ADDR", defaultCheckerAddr),
+			CheckerNodes:       parseCheckerNodes(),
 			Timeout:            getEnvDuration("GRPC_TIMEOUT", 5*time.Minute),
 			MaxConcurrent:      getEnvInt("GRPC_MAX_CONCURRENT", 0),
+			AggregateMode:      getEnvBool("GRPC_AGGREGATE_MODE", false), // Default to efficient distribution
 		},
 	}
 }
@@ -142,4 +156,59 @@ func getEnvDuration(key string, defaultValue time.Duration) time.Duration {
 		}
 	}
 	return defaultValue
+}
+
+func getEnvBool(key string, defaultValue bool) bool {
+	if value := os.Getenv(key); value != "" {
+		if boolValue, err := strconv.ParseBool(value); err == nil {
+			return boolValue
+		}
+	}
+	return defaultValue
+}
+
+// parseCheckerNodes parses checker nodes from environment variables
+// Format: GRPC_CHECKER_NODES="addr1:tag1,addr2:tag2,addr3:tag3"
+// Example: GRPC_CHECKER_NODES="localhost:50051:node1,localhost:50052:node2"
+func parseCheckerNodes() []CheckerNodeConfig {
+	nodesEnv := getEnv("GRPC_CHECKER_NODES", "")
+	if nodesEnv == "" {
+		// Fallback to single node configuration for backward compatibility
+		addr := getEnv("GRPC_CHECKER_SERVICE_ADDR", defaultCheckerAddr)
+		tag := getEnv("GRPC_CHECKER_NODE_TAG", "default")
+		return []CheckerNodeConfig{
+			{
+				Addr: addr,
+				Tag:  tag,
+			},
+		}
+	}
+
+	var nodes []CheckerNodeConfig
+	pairs := strings.Split(nodesEnv, ",")
+	for _, pair := range pairs {
+		parts := strings.Split(strings.TrimSpace(pair), ":")
+		if len(parts) >= 2 {
+			addr := strings.Join(parts[:len(parts)-1], ":")
+			tag := parts[len(parts)-1]
+			nodes = append(nodes, CheckerNodeConfig{
+				Addr: addr,
+				Tag:  tag,
+			})
+		}
+	}
+
+	// If no valid nodes parsed, fallback to default
+	if len(nodes) == 0 {
+		addr := getEnv("GRPC_CHECKER_SERVICE_ADDR", defaultCheckerAddr)
+		tag := getEnv("GRPC_CHECKER_NODE_TAG", "default")
+		return []CheckerNodeConfig{
+			{
+				Addr: addr,
+				Tag:  tag,
+			},
+		}
+	}
+
+	return nodes
 }

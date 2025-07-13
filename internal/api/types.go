@@ -61,10 +61,11 @@ type CheckResponse struct {
 }
 
 type CheckResult struct {
-	Index  int    `json:"index"`
-	Status string `json:"status"`
-	Delay  int64  `json:"delay_ms"`
-	Error  string `json:"error,omitempty"`
+	Index          int      `json:"index"`
+	Status         string   `json:"status"`
+	Delay          int64    `json:"delay_ms"`
+	Error          string   `json:"error,omitempty"`
+	CheckerNodeTag []string `json:"tag,omitempty"` // Array of worker tags that successfully processed this result
 }
 
 type WorkerPoolStatus struct {

@@ -31,14 +31,15 @@ type Config interface {
 }
 
 type CheckResult struct {
-	Status      CheckResultStatusType
-	Protocol    string
-	Raw         string
-	RealDelay   time.Duration
-	Remark      string
-	Server      string
-	CountryCode string
-	Error       string
+	Status         CheckResultStatusType
+	Protocol       string
+	Raw            string
+	RealDelay      time.Duration
+	Remark         string
+	Server         string
+	CountryCode    string
+	Error          string
+	CheckerNodeTag []string // Array of worker tags that successfully processed this result
 }
 
 type Core struct {
@@ -134,8 +135,9 @@ func (c *Core) CheckConfigs(configs []string) <-chan CheckResult {
 				defer func() { <-sem }() // Release semaphore
 
 				result := CheckResult{
-					Status: CheckResultStatusSuccess,
-					Raw:    cfg,
+					Status:         CheckResultStatusSuccess,
+					Raw:            cfg,
+					CheckerNodeTag: []string{"local"}, // Default tag for local processing
 				}
 
 				parsed, err := c.parser.Parse(cfg)

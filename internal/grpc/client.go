@@ -37,17 +37,18 @@ type CheckerClient struct {
 }
 
 type CheckerResponse struct {
-	JobID       string
-	Config      string
-	IsValid     bool
-	LatencyMs   int64
-	Error       string
-	Protocol    string
-	Server      string
-	CountryCode string
-	Remark      string
-	Status      string
-	Timestamp   time.Time
+	JobID          string
+	Config         string
+	IsValid        bool
+	LatencyMs      int64
+	Error          string
+	Protocol       string
+	Server         string
+	CountryCode    string
+	Remark         string
+	Status         string
+	CheckerNodeTag string
+	Timestamp      time.Time
 }
 
 type CheckerStats struct {
@@ -173,17 +174,18 @@ func (c *CheckerClient) receiveResponses(ctx context.Context, stream checkerpb.C
 		}
 
 		result := &CheckerResponse{
-			JobID:       resp.JobId,
-			Config:      resp.Config,
-			IsValid:     resp.IsValid,
-			LatencyMs:   resp.LatencyMs,
-			Error:       resp.ErrorMessage,
-			Protocol:    resp.Protocol,
-			Server:      resp.Server,
-			CountryCode: resp.CountryCode,
-			Remark:      resp.Remark,
-			Status:      resp.Status.String(),
-			Timestamp:   resp.Timestamp.AsTime(),
+			JobID:          resp.JobId,
+			Config:         resp.Config,
+			IsValid:        resp.IsValid,
+			LatencyMs:      resp.LatencyMs,
+			Error:          resp.ErrorMessage,
+			Protocol:       resp.Protocol,
+			Server:         resp.Server,
+			CountryCode:    resp.CountryCode,
+			Remark:         resp.Remark,
+			Status:         resp.Status.String(),
+			CheckerNodeTag: resp.CheckerNodeTag,
+			Timestamp:      resp.Timestamp.AsTime(),
 		}
 
 		select {

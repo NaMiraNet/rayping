@@ -346,9 +346,10 @@ func (h *Handler) executeCheckTask(ctx context.Context, data interface{}) (inter
 	for result := range h.grpcCore.CheckConfigs(taskData.Configs) {
 		results = append(results, result)
 		checkResult := CheckResult{
-			Index:  i,
-			Status: string(result.Status),
-			Delay:  result.RealDelay.Milliseconds(),
+			Index:          i,
+			Status:         string(result.Status),
+			Delay:          result.RealDelay.Milliseconds(),
+			CheckerNodeTag: result.CheckerNodeTag,
 		}
 
 		if result.Error != "" {

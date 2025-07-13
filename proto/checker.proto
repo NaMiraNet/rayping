@@ -36,6 +36,7 @@ message CheckResponse {
   string country_code = 9;
   string remark = 10;
   google.protobuf.Timestamp timestamp = 11;
+  string checker_node_tag = 12; // Node tag for identifying which checker processed this
 }
 
 enum CheckStatus {
@@ -55,6 +56,7 @@ message HealthResponse {
   int32 active_workers = 3;
   int32 queue_size = 4;
   map<string, string> details = 5;
+  string checker_node_tag = 6; // Node tag for identifying the checker
 }
 
 message StatsRequest {}
@@ -65,4 +67,5 @@ message StatsResponse {
   int64 failed_checks = 3;
   double success_rate = 4;
   int64 uptime_seconds = 5;
+  string checker_node_tag = 6; // Node tag for identifying the checker
 }
