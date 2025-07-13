@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"sync"
 	"sync/atomic"
@@ -32,6 +33,8 @@ type GRPCCoreOpts struct {
 	MaxConcurrent      int
 	AggregateMode      bool // If true, send configs to all workers; if false, distribute efficiently
 	Logger             *zap.Logger
+	APIKey             string
+	TLSConfig          *tls.Config
 }
 
 type GRPCCoreStats struct {
@@ -55,10 +58,14 @@ func NewGRPCCore(opts *GRPCCoreOpts) (*GRPCCore, error) {
 	var clients []*CheckerClient
 	var tags []string
 
+	clientOpts := &CheckerClientOpts{
+		APIKey:    opts.APIKey,
+		TLSConfig: opts.TLSConfig,
+	}
 	// If using new multi-node configuration
 	if len(opts.CheckerNodes) > 0 {
 		for _, node := range opts.CheckerNodes {
-			client, err := NewCheckerClient(node.Addr, opts.Logger)
+			client, err := NewCheckerClient(node.Addr, opts.Logger, clientOpts)
 			if err != nil {
 				opts.Logger.Error("Failed to create checker client",
 					zap.String("addr", node.Addr),
@@ -74,7 +81,7 @@ func NewGRPCCore(opts *GRPCCoreOpts) (*GRPCCore, error) {
 		}
 	} else if opts.CheckerServiceAddr != "" {
 		// Fallback to legacy single node configuration
-		client, err := NewCheckerClient(opts.CheckerServiceAddr, opts.Logger)
+		client, err := NewCheckerClient(opts.CheckerServiceAddr, opts.Logger, clientOpts)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create checker client: %w", err)
 		}
@@ -158,6 +165,7 @@ func (g *GRPCCore) HealthCheck(ctx context.Context) error {
 	for i, client := range clients {
 		if err := client.HealthCheck(ctx); err != nil {
 			g.logger.Error("Health check failed for checker node",
+				zap.String("addr", client.serverAddr),
 				zap.String("tag", tags[i]),
 				zap.Error(err))
 			lastErr = err
