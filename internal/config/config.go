@@ -74,6 +74,14 @@ type GRPCConfig struct {
 	Timeout            time.Duration
 	MaxConcurrent      int
 	AggregateMode      bool // If true, send each config to all workers for redundancy; if false, distribute efficiently
+	APIKey             string
+	TLS                GRPCTLSConfig
+}
+
+type GRPCTLSConfig struct {
+	CertFile string
+	KeyFile  string
+	CAFile   string
 }
 
 type CheckerNodeConfig struct {
@@ -128,6 +136,12 @@ func Load() *Config {
 			Timeout:            getEnvDuration("GRPC_TIMEOUT", 5*time.Minute),
 			MaxConcurrent:      getEnvInt("GRPC_MAX_CONCURRENT", 0),
 			AggregateMode:      getEnvBool("GRPC_AGGREGATE_MODE", false), // Default to efficient distribution
+			APIKey:             getEnv("GRPC_API_KEY", ""),
+			TLS: GRPCTLSConfig{
+				CertFile: getEnv("GRPC_TLS_CERT_FILE", ""),
+				KeyFile:  getEnv("GRPC_TLS_KEY_FILE", ""),
+				CAFile:   getEnv("GRPC_TLS_CA_FILE", ""),
+			},
 		},
 	}
 }
