@@ -523,6 +523,12 @@ make test
 # Start development server
 make dev
 ```
+# 📦 Projects Using this Core
+
+This repository is used as the core for other tools built on top of the Namira platform.
+
+- [NamiraChecker](https://github.com/AmirrezaKhezerlou/namira_check_client): A Flutter-based config filter and updater for v2ray subscriptions, designed to work seamlessly with Namira services.
+
 
 ## 📄 License
 
