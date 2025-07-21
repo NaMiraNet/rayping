@@ -131,7 +131,7 @@ func (c *CheckerClient) withAuthContext(ctx context.Context) context.Context {
 	if c.apiKey == "" {
 		return ctx
 	}
-	return metadata.AppendToOutgoingContext(ctx, "authorization", c.apiKey)
+	return metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+c.apiKey)
 }
 
 func (c *CheckerClient) CheckConfigs(ctx context.Context, jobID string, configs []string) (<-chan *CheckerResponse, error) {
