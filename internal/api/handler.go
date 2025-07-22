@@ -344,7 +344,6 @@ func (h *Handler) executeCheckTask(ctx context.Context, data interface{}) (inter
 
 	i := 0
 	for result := range h.grpcCore.CheckConfigs(taskData.Configs) {
-		results = append(results, result)
 		checkResult := CheckResult{
 			Index:          i,
 			Status:         string(result.Status),
@@ -372,6 +371,7 @@ func (h *Handler) executeCheckTask(ctx context.Context, data interface{}) (inter
 				h.jobsOnSuccess(result)
 			}
 		}
+		results = append(results, result)
 
 		if job.DoneCount >= job.TotalCount {
 			job.Complete()
