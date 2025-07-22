@@ -201,6 +201,15 @@ func runAPIServer(cmd *cobra.Command, args []string) {
 		},
 	)
 
+	if len(cfg.Telegram.BotTokens) > 1 {
+		for i, token := range cfg.Telegram.BotTokens {
+			if i == 0 && token == cfg.Telegram.BotToken {
+				continue
+			}
+			telegram.AddBot(fmt.Sprintf("bot-%d", i+1), token)
+		}
+	}
+
 	tgLimiter := rate.NewLimiter(rate.Every(cfg.Telegram.SendingInterval), 1)
 
 	telegramConfigResultHandler := func(result core.CheckResult) {
