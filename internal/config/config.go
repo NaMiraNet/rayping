@@ -61,6 +61,7 @@ type AppConfig struct {
 
 type TelegramConfig struct {
 	BotToken        string
+	BotTokens       []string // Multiple bot tokens for round-robin
 	Channel         string
 	Template        string
 	QRConfig        string
@@ -124,6 +125,7 @@ func Load() *Config {
 		},
 		Telegram: TelegramConfig{
 			BotToken:        getEnv("TELEGRAM_BOT_TOKEN", ""),
+			BotTokens:       parseBotTokens(),
 			Channel:         getEnv("TELEGRAM_CHANNEL", ""),
 			Template:        getEnv("TELEGRAM_TEMPLATE", ""),
 			QRConfig:        getEnv("TELEGRAM_QR_CONFIG", ""),
@@ -225,4 +227,33 @@ func parseCheckerNodes() []CheckerNodeConfig {
 	}
 
 	return nodes
+}
+
+// parseBotTokens parses multiple bot tokens from environment variables
+// Format: TELEGRAM_BOT_TOKENS="token1,token2,token3"
+// Falls back to single TELEGRAM_BOT_TOKEN if TELEGRAM_BOT_TOKENS is not set
+func parseBotTokens() []string {
+	// Try the new multi-token format first
+	tokensEnv := getEnv("TELEGRAM_BOT_TOKENS", "")
+	if tokensEnv != "" {
+		var tokens []string
+		parts := strings.Split(tokensEnv, ",")
+		for _, token := range parts {
+			token = strings.TrimSpace(token)
+			if token != "" {
+				tokens = append(tokens, token)
+			}
+		}
+		if len(tokens) > 0 {
+			return tokens
+		}
+	}
+
+	// Fallback to single token for backward compatibility
+	singleToken := getEnv("TELEGRAM_BOT_TOKEN", "")
+	if singleToken != "" {
+		return []string{singleToken}
+	}
+
+	return []string{}
 }
